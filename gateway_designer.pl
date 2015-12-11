@@ -8,6 +8,7 @@ use Bio::SeqIO;
 use Bio::DB::GenBank;
 use List::Util qw (min);
 use Data::Dumper;
+use Term::ANSIColor;# qw(:constants);
 
 my %codons = 
 (
@@ -33,6 +34,7 @@ my %opts = ();
 GetOptions(
     \%opts,
     "c|cterm",  
+    "colour|color",
     "d|number_translation",
     "g|gene=s",
     "h|?|help",
@@ -157,13 +159,13 @@ sub processSeqObject{
             my %f_prime = getPrimersAndTms(\@fseqs, $gene_sequence);
             if (not keys %f_prime){
                 warn "No unique forward primers found within ". 
-                "$opts{min} < TM < $opts{max} for $identifier\n";
+                "$opts{min_tm} < TM < $opts{max_tm} for $identifier\n";
                 next;
             }
             my %r_prime = getPrimersAndTms(\@rseqs, $gene_sequence);
             if (not keys %r_prime){
                 warn "No unique reverse primers found within ". 
-                "$opts{min} < TM < $opts{max} for $identifier\n";
+                "$opts{min_tm} < TM < $opts{max_tm} for $identifier\n";
                 next;
             }
             my @closest_pairs = getClosestTmPrimers(\%f_prime, \%r_prime);
@@ -181,15 +183,21 @@ sub processSeqObject{
                           ? $primer_starts{fusion_c} 
                           : $primer_starts{native_c};
                         $full_r .= $r;
-                        print <<EOT
+                        my $header =  <<EOT
 
 $identifier pair $primer_pair
 Forward: $full_f
 Reverse: $full_r
 Targetting primers: $f/$r (TM $pairTms->[0]/$pairTms->[1])
-
 EOT
 ;
+                        if ($opts{colour}){
+                            print color('bold');
+                            print $header;
+                            print color('reset');
+                        }else{
+                            print $header;
+                        }
                         printAlignedCdsAndPrimers
                         (
                             $gene_sequence, 
@@ -263,13 +271,29 @@ sub lineUpAndPrintTranslation{
     my ($dna, $protein, $start) = @_;
     $protein = join('', map { "-$_-" } split('', $protein) );
     $protein = '-' x $start . $protein;
-    my $num_length = length(length($dna)); 
     (my $raw_protein = $protein) =~ s/\-//g;
-    my $max_protein = length($raw_protein); 
-    for (my $i = 0; $i < length($dna); $i += $opts{l}){
+    my $protein_length = length($raw_protein); 
+    my $dna_length = length($dna);
+    my $header = <<EOT
+PCR Product Length: $dna_length
+Translation Length: $protein_length
+
+EOT
+;
+
+    if ($opts{colour}){
+        print color('bold');
+        print $header;       
+        print color('reset');
+    }else{
+        print $header;       
+    }
+    #my $primer_line = " " x length($coding_upper); 
+    my $num_length = length($dna_length); 
+    for (my $i = 0; $i < $dna_length; $i += $opts{l}){
         my $l = $opts{l};
-        if ($i + $opts{l} > length($dna)){
-            $l = length($dna) - $i ;
+        if ($i + $opts{l} > $dna_length){
+            $l = $dna_length - $i ;
         }
         my $pl = $opts{l};
         if ($i + $opts{l} > length($protein)){
@@ -290,7 +314,7 @@ sub lineUpAndPrintTranslation{
                 $pn++ if ($cn % 3 == 2); #if first nucleotide of line is the last letter of 
                                      #codon we represent the next protein 'letter'
             }
-            $pn = $pn <= $max_protein ? $pn : $max_protein;
+            $pn = $pn <= $protein_length ? $pn : $protein_length;
             $p = sprintf("%${num_length}d: %s", $pn, $p);
             
         }
@@ -315,22 +339,42 @@ sub printAlignedCdsAndPrimers{
     my ($r_hit) = searchSequence($seq, $rprime);
     my $f_start = $f_hit - length($fprime);
     my $r_start = $r_hit - length($rprime);
-    my $primer_line = " " x length($coding_upper); 
+    my $target_length = $r_hit - $f_start;
+    if ($opts{colour}){
+        print color('bold');
+        print "Target Length: $target_length\n";
+        print color('reset');
+    }else{
+        print "Target Length: $target_length\n";
+    }
+    #my $primer_line = " " x length($coding_upper); 
     my $arrow_line = " " x length($coding_upper); 
-    substr($primer_line, $f_start, length($fprime), $fprime);
-    substr($primer_line, $r_start, length($rprime), $rprime);
-    substr($arrow_line, $f_start, length($fprime), ">" x length($fprime));
-    substr($arrow_line, $r_start, length($rprime), "<" x length($rprime));
+    #substr($primer_line, $f_start, length($fprime), $fprime);
+    #substr($primer_line, $r_start, length($rprime), $rprime);
+    substr($arrow_line, $f_start , length($fprime), ">" x length($fprime));
+    substr($arrow_line, $r_start , length($rprime), "<" x length($rprime));
     for (my $i = 0; $i < length($coding_upper); $i += $opts{l}){
         my $l = $opts{l};
         if ($i + $opts{l} > length($coding_upper)){
             $l = length($coding_upper) - $i ;
         }
-        print substr($coding_upper, $i, $l) . "\n"; 
-        my $pr = substr($primer_line , $i, $l) . "\n"; 
+        my $s = substr($coding_upper, $i, $l) ;
+        if ($opts{colour}){
+            my @color_coords = ();
+            push @color_coords, getPrimerColorCoords($i, $l, $r_start, $r_start + length($rprime));
+            push @color_coords, getPrimerColorCoords($i, $l, $f_start, $f_start + length($fprime));
+            for my $ar (@color_coords) {
+                my ($start, $len) = @$ar;
+                $s = substr($s, 0, $start)                  # first part
+                   . colored(substr($s,$start,$len), 'red' )  # colored part
+                   . substr($s,$start+$len);                  # final part
+            }
+        }
+        print "$s\n"; 
+            #my $pr = substr($primer_line , $i, $l) . "\n"; 
         my $ar =  substr($arrow_line , $i, $l) . "\n"; 
-        if ($pr =~ /\w/){
-            print $pr;
+        if ($ar =~ /\S/){
+            #print $pr;
             print $ar;
         }else{
             print "\n";
@@ -338,6 +382,18 @@ sub printAlignedCdsAndPrimers{
     }
     print "\n";
         
+}
+
+###########################################################
+sub getPrimerColorCoords{
+    my ($offset, $length, $start, $end) = @_;
+    return if $start > $offset + $length;
+    return if $end < $offset; 
+    my $s = $start - $offset; 
+    my $e = $end - $offset;
+    $s = $s > 0 ? $s : 0;
+    $e = $e < $length ? $e : $length ;
+    return [$s,  $e - $s];#return anon array of index and length
 }
 
 ###########################################################
@@ -455,6 +511,8 @@ Options:
         Maximum TM for primers. Default = 90.
     --min_tm
         Minimum TM for primers. Default = 45.
+    --colour,--color
+        Use this flag to colour your output.
     -h,--help
         Show this message and exit.
 EOT
