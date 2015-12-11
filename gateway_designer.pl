@@ -34,11 +34,13 @@ my %opts = ();
 GetOptions(
     \%opts,
     "c|cterm",  
+    "closest_tm",
     "colour|color",
     "d|number_translation",
     "g|gene=s",
     "h|?|help",
     "l|line_length=i",
+    "max_diff_tm=f", 
     "max_tm=f",
     "min_tm=f",
     "n|nterm",
@@ -417,22 +419,25 @@ FOR: for my $f (@ftms){
         my $r_diff;
 REV:    for my $r (@rtms){
             my $diff = $f - $r;
-            if (not defined $prev_diff or abs($diff) <= abs($prev_diff)){
-                push @{$diff_pairs{$diff}}, [$f, $r];
-                $prev_diff = $diff;
-            }else{
-                if (not defined $r_diff or abs ($diff) <= abs($r_diff)){
-                    $r_diff = $diff;
-                }else{#this diff is greater than our last in @rtms
-                    last REV;
-                }
-            }
+            push @{$diff_pairs{$diff}}, [$f, $r];
         } 
-    } 
-    my $min = min( map { abs($_) } keys (%diff_pairs) ) ;
+    }
     my @closest = ();
-    push @closest, @{$diff_pairs{$min}} if exists $diff_pairs{$min};
-    push @closest, @{$diff_pairs{$min*-1}} if exists $diff_pairs{$min*-1};
+    if ($opts{closest_tm}){
+        my $min = min( map { abs($_) } keys (%diff_pairs) ) ;
+        push @closest, @{$diff_pairs{$min}} if exists $diff_pairs{$min};
+        push @closest, @{$diff_pairs{$min*-1}} if exists $diff_pairs{$min*-1};
+    }else{
+        foreach my $k (keys %diff_pairs){
+            if ($opts{max_diff_tm}){
+                if (abs($k) <= $opts{max_diff_tm}){
+                    push @closest, @{$diff_pairs{$k}};
+                }
+            }else{
+                push @closest, @{$diff_pairs{$k}};
+            }
+        }
+    }
     return @closest;
 }
 ###########################################################
@@ -453,6 +458,10 @@ sub getPrimersAndTms{
                 push @{$tm_to_primers{$tm}}, $p;
             }
         }
+    }
+    my %seen = ();
+    foreach my $tm (keys %tm_to_primers){
+        @{$tm_to_primers{$tm}} = grep {! $seen{$_}++ } @{$tm_to_primers{$tm}};
     }
     return %tm_to_primers;
 }
@@ -511,10 +520,15 @@ Options:
         Maximum TM for primers. Default = 90.
     --min_tm
         Minimum TM for primers. Default = 45.
+    --max_diff_tm
+        Maximum difference between the TM of forward and reverse primers.
+    --closest_tm
+        Only return primer pairs with the smallest difference between the TM of forwards and reverse primers.
     --colour,--color
         Use this flag to colour your output.
     -h,--help
         Show this message and exit.
+
 EOT
 ;
     exit 1 if $msg;
