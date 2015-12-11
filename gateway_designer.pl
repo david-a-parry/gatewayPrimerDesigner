@@ -43,6 +43,7 @@ GetOptions(
     "q|query=s",
     "v|verbose",
 ) or usage("Syntax error.\n");
+usage() if $opts{h};
 my $query = $opts{g} || ''; 
 if ($opts{q}){
     $query .= "$opts{q}";
@@ -430,22 +431,34 @@ sub searchSequence {
 ###########################################################
 
 sub usage {
-    my $msg = @_;
+    my $msg = shift;
     if ($msg) {
-        print STDERR $msg;
-        print STDERR <<EOT
+        print STDERR "\n$msg";
+    }
+    
+    print STDERR <<EOT
 
 Options: 
     -g,--gene  <gene query to search genbank with>
         By default this searches for human sequences of less than 10,000 bp (i.e. gene [GENE] AND Human [ORGN] and 0:10000 [SLEN]). However, you may change the parameters used using the -q/--query option.
     -q,--query <Detailed query/parameters>
         Use instead of -g query if you wish to enter a detailed query or use in conjunction with -g/--gene option to specify custom parameters for the search. If you know the accession of your sequence you can enter it here for a quicker and more specific search.
+    -c,--cterm
+        Use this flag to design for C-Terminal fusion proteins.
+    -n,--nterm
+        Use this flag to design for N-Terminal fusion proteins.
+    -d,--number_translation
+        Use this flag to number the translated clone output.
+    -l,--line_length
+        Specify the length of lines for your sequence output. Default = 60.
+    --max_tm
+        Maximum TM for primers. Default = 90.
+    --min_tm
+        Minimum TM for primers. Default = 45.
     -h,--help
         Show this message and exit.
 EOT
 ;
-    }
-    
     exit 1 if $msg;
     exit;
 }
