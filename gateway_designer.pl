@@ -429,7 +429,7 @@ REV:    for my $r (@rtms){
         push @closest, @{$diff_pairs{$min*-1}} if exists $diff_pairs{$min*-1};
     }else{
         foreach my $k (keys %diff_pairs){
-            if ($opts{max_diff_tm}){
+            if (defined $opts{max_diff_tm}){
                 if (abs($k) <= $opts{max_diff_tm}){
                     push @closest, @{$diff_pairs{$k}};
                 }
