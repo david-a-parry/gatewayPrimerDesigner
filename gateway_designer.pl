@@ -650,44 +650,82 @@ Usage: $0 -g FUCT1 [options]
        $0 -q NM_001145266 [options]
 
 Options: 
+
     -g,--gene  <gene query to search genbank with>
-        By default this searches for human sequences of less than 10,000 bp (i.e. gene [GENE] AND Human [ORGN] and 0:10000 [SLEN]). However, you may change the parameters used using the -q/--query option.
+        By default this searches for human sequences of less 
+        than 10,000 bp (i.e. gene [GENE] AND Human [ORGN] 
+        and 0:10000 [SLEN]). However, you may change the 
+        parameters used using the -q/--query option.
+
     -q,--query <Detailed query/parameters>
-        Use instead of -g query if you wish to enter a detailed query or use in conjunction with -g/--gene option to specify custom parameters for the search. If you know the accession of your sequence you can enter it here for a quicker and more specific search.
+        Use instead of -g query if you wish to enter a 
+        detailed query or use in conjunction with -g/--gene
+        option to specify custom parameters for the search. 
+        If you know the accession of your sequence you can 
+        enter it here for a quicker and more specific search.
+
     -f,--file <genbank file>
-        Use instead of -g or -q options to specify a genbank file to use instead.
+        Use instead of -g or -q options to specify a genbank
+        file to use instead.
+
     -c,--cterm
-        Use this flag to design for C-Terminal fusion proteins.
+        Use this flag to design for C-Terminal fusion 
+        proteins.
+
     -n,--nterm
-        Use this flag to design for N-Terminal fusion proteins.
+        Use this flag to design for N-Terminal fusion 
+        proteins.
+
     -t,--number_translation
         Use this flag to number the translated clone output.
+
     -l,--line_length
-        Specify the length of lines for your sequence output. Default = 60.
+        Specify the length of lines for sequence output. 
+        Default = 60.
+
     --max_tm
         Maximum TM for primers. Default = 75.
+
     --min_tm
         Minimum TM for primers. Default = 50.
+
     --max_diff_tm
-        Maximum difference between the TM of forward and reverse primers. Default = 5.
+        Maximum difference between the TM of forward and 
+        reverse primers. Default = 5.
+
     --closest_tm
-        Only return primer pairs with the smallest difference between the TM of forwards and reverse primers.
+        Only return primer pairs with the smallest 
+        difference between the TM of forwards and reverse 
+        primers.
+
     --colour,--color
         Use this flag to colour your output.
+
     --cation_conc
-        Concentration of monovalent cations for calculating TM, in mM. Default = 200.
+        Concentration of monovalent cations for calculating
+        TM, in mM. Default = 200.
+
     --dntp_conc
-        Concentration of dNTPs for calculating TM, in mM. Default = 0.2.
+        Concentration of dNTPs for calculating TM, in mM. 
+        Default = 0.2.
+
     --mg_conc
-        Concentration of Mg2+ for calculating TM, in mM. Default = 1.5.
+        Concentration of Mg2+ for calculating TM, in mM. 
+        Default = 1.5.
+
     -p,--primer_concentration
-        Concentration of primers for calculating TM, in nM. Default = 200.
+        Concentration of primers for calculating TM, in nM.
+        Default = 200.
+
     -h,--help
         Show this message and exit.
 
-    Copyright © 2015  David A. Parry
-    
-    Code for calculating primer TMs is lifted from perlprimer.pl (Copyright © 2003-2011, Owen Marshall)
+
+Copyright © 2015  David A. Parry
+
+Code for calculating primer TMs is lifted from perlprimer.pl (Copyright © 2003-2011, Owen Marshall)
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 EOT
 ;
@@ -696,8 +734,4 @@ EOT
 }
 
 
-=cut 
-Copyright 2015  David A. Parry
-
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details. You should have received a copy of the GNU General Public License along with this program. If not, see <http://www.gnu.org/licenses/>.
 
