@@ -565,7 +565,6 @@ sub getPrimersAndTms{
 
 sub calculateTm{
 	my ($primer) = @_;
-    # Starting ionic concentration variables
     $primer = uc($primer); # if user enters primer directly as lower-case
 	my ($i, $nn, $initterm, $endterm);
 	my $primer_len = length($primer);
