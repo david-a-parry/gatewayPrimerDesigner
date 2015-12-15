@@ -400,7 +400,7 @@ sub printAlignedCdsAndPrimers{
     $rprime = reverseComplement($rprime);
     my $coding_upper = lc (substr($seq, 0, $cds_start));
     $coding_upper .= uc(substr($seq, $cds_start, $cds_end - $cds_start));
-    $coding_upper .= lc(substr($seq, $cds_end - $cds_start));
+    $coding_upper .= lc(substr($seq, $cds_end ));
     my ($f_hit) = searchSequence($seq, $fprime);
 #we've already checked that these are unique hits in getPrimersAndTms sub
     my ($r_hit) = searchSequence($seq, $rprime);
