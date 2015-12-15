@@ -344,10 +344,10 @@ sub printAlignedCdsAndPrimers{
     my $target_length = $r_hit - $f_start;
     if ($opts{colour}){
         print color('bold');
-        print "Target Length: $target_length\n";
+        print "Target Length: $target_length\n\n";
         print color('reset');
     }else{
-        print "Target Length: $target_length\n";
+        print "Target Length: $target_length\n\n";
     }
     #my $primer_line = " " x length($coding_upper); 
     my $arrow_line = " " x length($coding_upper); 
