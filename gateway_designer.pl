@@ -237,7 +237,7 @@ sub printTranslation{
         $full_f = "$primer_starts{native_n}$f";
         $translation_start = 46;
     }
-    if ($opts{n}){
+    if ($opts{c}){
         $full_r = "$primer_starts{fusion_c}$r";
     }else{
         $full_r = "$primer_starts{native_c}$r";
