@@ -112,7 +112,10 @@ my %primer_starts =
 );
 
 if (not $query and not $opts{f}){
-    usage("either -f/--file or -g/--gene and/or -q/--query options are required.\n");
+    usage
+    (
+        "either -f/--file or -g/--gene and/or -q/--query options are required.\n"
+    );
 }
 
 my $stream_obj;
@@ -312,7 +315,8 @@ sub printTranslation{
     my ($f_hit) = searchSequence($seq, $f);
 #we've already checked that these are unique hits in getPrimersAndTms sub
     my ($r_hit) = searchSequence($seq, $r);
-    my $clone_seq = $full_f . substr($seq, $f_hit, ($r_hit - length($r)) - $f_hit) . $full_r;
+    my $clone_seq = $full_f . 
+        substr($seq, $f_hit, ($r_hit - length($r)) - $f_hit) . $full_r;
     my $peptide = translateOrf( substr($clone_seq, $translation_start)); 
     lineUpAndPrintTranslation($clone_seq, $peptide, $translation_start);     
 }
@@ -428,8 +432,20 @@ sub printAlignedCdsAndPrimers{
         my $s = substr($coding_upper, $i, $l) ;
         if ($opts{colour}){
             my @color_coords = ();
-            push @color_coords, getPrimerColorCoords($i, $l, $r_start, $r_start + length($rprime));
-            push @color_coords, getPrimerColorCoords($i, $l, $f_start, $f_start + length($fprime));
+            push @color_coords, getPrimerColorCoords
+            (
+                $i, 
+                $l, 
+                $r_start, 
+                $r_start + length($rprime)
+            );
+            push @color_coords, getPrimerColorCoords
+            (
+                $i, 
+                $l, 
+                $f_start, 
+                $f_start + length($fprime)
+            );
             for my $ar (@color_coords) {
                 my ($start, $len) = @$ar;
                 $s = substr($s, 0, $start)                  # first part
@@ -603,7 +619,8 @@ sub calculateTm{
 	# Salt corrected Tm
 	# NB - for PCR I'm assuming for the moment that the [strand target] << [oligo]
 	# and that therefore the C(t) correction term approx equals [oligo]
-	my $corrected_tm=(($deltaH * 1000) / ($deltaS + (1.987 * log($oligo_conc_mols/4)))) - 273.15;
+	my $corrected_tm =
+(($deltaH * 1000) / ($deltaS + (1.987 * log($oligo_conc_mols/4)))) - 273.15;
 	return ($corrected_tm);
 }
 
