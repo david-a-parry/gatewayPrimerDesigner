@@ -13,7 +13,7 @@ The following perl modules are required by this script:
 These can be installed via cpan - see http://www.cpan.org/modules/INSTALL.html
 
 
-##INSTALL and RUN
+##Install and Run
 
 Get the script:
     
