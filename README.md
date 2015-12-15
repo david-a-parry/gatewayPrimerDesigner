@@ -2,7 +2,7 @@
 
 Simple tool to attempt automation of gateway cloning primer design
 
-##Get required modules
+##Required modules
 
 The following perl modules are required by this script:
 
@@ -12,6 +12,7 @@ The following perl modules are required by this script:
 
 These can be installed via cpan - see http://www.cpan.org/modules/INSTALL.html
 
+In addition, perl version 5.10.0 or higher is required (run perl -v to see what version you have installed).
 
 ##Install and Run
 
