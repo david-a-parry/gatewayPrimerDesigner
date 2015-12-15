@@ -10,6 +10,8 @@ use List::Util qw (min);
 use Data::Dumper;
 use Term::ANSIColor;# qw(:constants);
 
+use 5.010;
+
 my %codons = 
 (
     AAA=>"K", AAC=>"N", AAG=>"K", AAT=>"N", 
@@ -30,21 +32,58 @@ my %codons =
     TTA=>"L", TTC=>"F", TTG=>"L", TTT=>"F"
 );
 
+my %oligo_dH =
+qw(
+    AA -7.9 TT -7.9 
+    AT -7.2 TA -7.2 
+    CA -8.5 TG -8.5 
+    GT -8.4 AC -8.4 
+    CT -7.8 AG -7.8 
+    GA -8.2 TC -8.2 
+    CG -10.6 GC -9.8 
+    GG -8.0 CC -8.0 
+    initC 0.1 initG 0.1 
+    initA 2.3 initT 2.3
+);
+
+#--------------------#
+# deltaS (cal/K.mol) #
+#--------------------#
+
+my %oligo_dS =
+qw(
+    AA -22.2 TT -22.2 
+    AT -20.4 TA -21.3 
+    CA -22.7 TG -22.7 
+    GT -22.4 AC -22.4 
+    CT -21.0 AG -21.0 
+    GA -22.2 TC -22.2 
+    CG -27.2 GC -24.4 
+    GG -19.9 CC -19.9 
+    initC -2.8 initG -2.8 
+    initA 4.1 initT 4.1 
+    sym -1.4
+);
+
 my %opts = ();
 GetOptions(
     \%opts,
-    "c|cterm",  
+    "cation_conc=f",
     "closest_tm",
     "colour|color",
-    "d|number_translation",
+    "c|cterm",  
+    "d|dntp_conc=f",
     "g|gene=s",
     "h|?|help",
     "l|line_length=i",
     "max_diff_tm=f", 
     "max_tm=f",
+    "mg_conc=f",
     "min_tm=f",
     "n|nterm",
+    "p|primer_concentration=f",
     "q|query=s",
+    "t|number_translation",
     "v|verbose",
 ) or usage("Syntax error.\n");
 usage() if $opts{h};
@@ -54,9 +93,14 @@ if ($opts{q}){
 }elsif($opts{g}){
     $query .= " [GENE] AND Human [ORGN] and 0:10000 [SLEN]"; 
 }
+$opts{max_diff_tm} //= 5;
 $opts{max_tm} ||= 90;
 $opts{min_tm} ||= 45;
 $opts{l} ||= 60;
+$opts{p} ||= 200; #in nM
+$opts{mg_conc} ||= 1.5; #in mM
+$opts{cation_conc} ||= 50; #in mM
+$opts{d} ||= 0.2; #in mM
 
 my %primer_starts = 
 (
@@ -171,6 +215,18 @@ sub processSeqObject{
                 next;
             }
             my @closest_pairs = getClosestTmPrimers(\%f_prime, \%r_prime);
+            if (not @closest_pairs){
+                warn <<EOT
+No primer pairs with suitable TMs found for $identifier. 
+Using options:
+
+Min TM      = $opts{min_tm}
+Max TM      = $opts{max_tm}
+Max diff TM = $opts{max_diff_tm}
+
+EOT
+;
+            }
             foreach my $pairTms (@closest_pairs){
                 my @fseqs = @{$f_prime{$pairTms->[0]}};
                 my @rseqs = @{$r_prime{$pairTms->[1]}};
@@ -306,7 +362,7 @@ EOT
         if ($i < length($protein)){
             $p = substr($protein, $i, $pl);
         }
-        if ($opts{d}){
+        if ($opts{t}){
             my $n = $i + 1; #dna position
             $d = sprintf("%${num_length}d: %s", $n, $d);
             my $cn = $i - $start; #0-based coding DNA position of first letter of line
@@ -455,6 +511,7 @@ sub getPrimersAndTms{
                 my $tm = calculateTm($p);
                 next if $tm > $opts{max_tm};
                 next if $tm < $opts{min_tm};
+                $tm = sprintf("%.2f", $tm);
                 push @{$tm_to_primers{$tm}}, $p;
             }
         }
@@ -466,21 +523,79 @@ sub getPrimersAndTms{
     return %tm_to_primers;
 }
 ###########################################################
+#this code is largely lifted from perlprimer.pl
+# PerlPrimer
+# Designs primers for PCR, Bisulphite PCR, QPCR (Realtime), and Sequencing
+
+# version 1.1.21 (21 Nov 2011) 
+# Copyright © 2003-2011, Owen Marshall
+
+
+
+#-----
+# subroutine for calculating Tm as per SantaLucia(1998), cited above, with Mg++
+# (and K+, Tris++) concentration calculated via equations 7 and 8 from
+# von Ahsen, et al, 2001, Clinical Chemistry 47(11):1956-1961
+#-----
+
 sub calculateTm{
-    my $dna = shift;
-    $dna = uc($dna);
-	my $at = 0;
-	my $cg = 0;
-	while ($dna =~ /(.)/g){
-		if ($1 =~ /[AT]/){
-			$at++;
-		}elsif ($1 =~ /[CG]/){
-			$cg++;
-		}else{
-			die "illegal character (\"$1\") in DNA sequence\n";
-		}
+	my ($primer) = @_;
+    # Starting ionic concentration variables
+    $primer = uc($primer); # if user enters primer directly as lower-case
+	my ($i, $nn, $initterm, $endterm);
+	my $primer_len = length($primer);
+	my ($deltaH, $deltaS);
+		
+	#-----------------------------#
+	# calculate deltaH and deltaS #
+	#-----------------------------#
+
+	for ($i=0; $i<$primer_len-1; $i++) {
+		$nn = substr($primer, $i, 2);
+		
+		$deltaH+= $oligo_dH{$nn};
+		$deltaS+= $oligo_dS{$nn};
 	}
-	return (2 * $at) + (4 * $cg);
+		
+	#-------------------------#
+	# initial term correction #
+	#-------------------------#
+
+	$initterm="init" . substr($primer, 0, 1);
+	$deltaH+= $oligo_dH{$initterm};
+	$deltaS+= $oligo_dS{$initterm};
+	
+	$endterm="init" . substr($primer, -1, 1);
+	$deltaH+= $oligo_dH{$endterm};
+	$deltaS+= $oligo_dS{$endterm};
+				
+	# Tm at 1M NaCl
+	# $tm= ($deltaH * 1000) / ($deltaS + (1.987 * log($oligo_conc / 4))) - 273.15;
+	
+	#------------------------------------------#
+	# correct for salt concentration on deltaS #
+	#------------------------------------------#
+	
+	# Big problems if [dNTPs] > [Mg++] !!  This is a quick fix ...
+	my $salt_correction;
+	if ($opts{mg_conc} > $opts{d}) {
+		$salt_correction = sqrt($opts{mg_conc} - $opts{d});
+	} else {
+		$salt_correction = 0;
+	}
+	
+	my $na_eq=($opts{cation_conc} + 120 * $salt_correction)/1000;
+	
+	# deltaS correction:
+	$deltaS += (0.368 * ($primer_len - 1) * log($na_eq));
+	
+	my $oligo_conc_mols = $opts{p} / 1000000000;
+
+	# Salt corrected Tm
+	# NB - for PCR I'm assuming for the moment that the [strand target] << [oligo]
+	# and that therefore the C(t) correction term approx equals [oligo]
+	my $corrected_tm=(($deltaH * 1000) / ($deltaS + (1.987 * log($oligo_conc_mols/4)))) - 273.15;
+	return ($corrected_tm);
 }
 
 ###########################################################
@@ -512,7 +627,7 @@ Options:
         Use this flag to design for C-Terminal fusion proteins.
     -n,--nterm
         Use this flag to design for N-Terminal fusion proteins.
-    -d,--number_translation
+    -t,--number_translation
         Use this flag to number the translated clone output.
     -l,--line_length
         Specify the length of lines for your sequence output. Default = 60.
@@ -521,11 +636,19 @@ Options:
     --min_tm
         Minimum TM for primers. Default = 45.
     --max_diff_tm
-        Maximum difference between the TM of forward and reverse primers.
+        Maximum difference between the TM of forward and reverse primers. Default = 5.
     --closest_tm
         Only return primer pairs with the smallest difference between the TM of forwards and reverse primers.
     --colour,--color
         Use this flag to colour your output.
+    --cation_conc
+        Concentration of monovalent cations for calculating TM, in mM. Default = 200.
+    --dntp_conc
+        Concentration of dNTPs for calculating TM, in mM. Default = 0.2.
+    --mg_conc
+        Concentration of Mg2+ for calculating TM, in mM. Default = 1.5.
+    -p,--primer_concentration
+        Concentration of primers for calculating TM, in nM. Default = 200.
     -h,--help
         Show this message and exit.
 
